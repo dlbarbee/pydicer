@@ -16,6 +16,8 @@ from pydicer.constants import (
     RT_STRUCTURE_STORAGE_UID,
     CT_IMAGE_STORAGE_UID,
     MR_IMAGE_STORAGE_UID,
+    MR4D_IMAGE_STORAGE_UID,
+    REG_STORAGE_UID,
 )
 from pydicer.quarantine import copy_file_to_quarantine
 from pydicer.utils import read_preprocessed_data, get_iterator
@@ -115,6 +117,7 @@ class PreprocessData:
                 CT_IMAGE_STORAGE_UID,
                 PET_IMAGE_STORAGE_UID,
                 MR_IMAGE_STORAGE_UID,
+                #MR4D_IMAGE_STORAGE_UID,
             ):
                 image_position = np.array(ds.ImagePositionPatient, dtype=float)
                 image_orientation = np.array(ds.ImageOrientationPatient, dtype=float)
@@ -127,6 +130,26 @@ class PreprocessData:
 
                 res_dict["slice_location"] = slice_location
 
+            elif dicom_type_uid == MR4D_IMAGE_STORAGE_UID:
+                # image_position = np.array(ds.ImagePositionPatient, dtype=float)
+                # image_orientation = np.array(ds.ImageOrientationPatient, dtype=float)
+
+                # image_plane_normal = np.cross(
+                #     image_orientation[:3], image_orientation[3:]
+                # )
+
+                # slice_location = (image_position * image_plane_normal)[2]
+
+                # res_dict["slice_location"] = slice_location
+                
+                # MR4D is not yet supported
+                logger.warning(
+                    "MR4D DICOM files are not yet supported. Skipping file %s", file
+                )
+                return None
+            elif dicom_type_uid == REG_STORAGE_UID:
+                logger.warning("REG DICOM files are not yet supported. Skipping file %s", file)
+                return None
             else:
                 raise ValueError(
                     f"Could not determine DICOM type {ds.Modality} {dicom_type_uid}."

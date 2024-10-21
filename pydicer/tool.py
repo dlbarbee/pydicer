@@ -163,6 +163,51 @@ class PyDicer:
             raise ValueError(
                 "input_obj must be of type str, pathlib.Path or inherit InputBase"
             )
+    def clean_preprocessed_data(self, move_duplicate=False):
+        """Removes duplicate sop_instance_uids and selects a single file_path.
+
+        Args:
+            move_duplicate (bool, optional): When True, the duplicate data will be moved into the duplicates folder.
+        """
+
+        df = self.read_preprocessed_data()
+
+        # make a df of unique sop_instance_uids, sorting by file_path length ascending, taking the top 1 for each
+        unique = df.drop_duplicates(subset='sop_instance_uid', keep='first')
+
+        # make a list of file_path that is not in the unique list, these will be the files eventually moved
+        dropped = df[~df['file_path'].isin(unique['file_path'])]
+
+        # backup the current preprocessed data to a csv with the current date
+        df.to_csv(f'{self.working_directory}/.pydicer/preprocessed_backup_{pd.Timestamp.now().strftime("%Y%m%d")}.csv')
+
+        # write the unique list to a csv
+        unique.to_csv(f'{self.working_directory}/.pydicer/preprocessed.csv')
+
+        # write the dropped list to a csv
+        if not Path(f'{self.working_directory}/duplicates').exists():
+            Path(f'{self.working_directory}/duplicates').mkdir()
+        dropped.to_csv(f'{self.working_directory}/duplicates/duplicates_{pd.Timestamp.now().strftime("%Y%m%d")}.csv')
+
+        ### consider making this its own method ###
+
+        # make a unique list of the file_path column for the dropped list
+        dropped_file_paths = dropped.drop_duplicates(subset='file_path',keep='first')
+
+        if move_duplicate:
+            # move the duplicate files to the duplicates folder
+            for _, row in dropped_file_paths.iterrows():
+                # create a try catch to move the files
+                try:
+                    Path(row['file_path']).replace(f"{self.working_directory}/duplicates/{row['sop_instance_uid']}.dcm")
+                    # TODO put a cool progress indicator here
+                except:
+                    print(f"Failed to move {row['sop_instance_uid']}.dcm")
+                    continue
+        
+        # reload the preprocessed again to get the new preprocessed data
+        self.preprocessed_data = read_preprocessed_data(self.working_directory)
+
 
     def preprocess(self, force: bool = True):
         """Preprocess the DICOM data in preparation for conversion
