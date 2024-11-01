@@ -18,7 +18,7 @@ def convert_rtstruct(
     output_dir=".",
     output_img=None,
     spacing=None,
-    filter=None,
+    structure_filter=None,
 ):
     """Convert a DICOM RTSTRUCT to NIFTI masks.
 
@@ -69,13 +69,13 @@ def convert_rtstruct(
             spacing = [float(i) for i in spacing.split(",")]
         logger.debug("Overriding image spacing with: %s", spacing)
 
-    if filter:
+    if structure_filter:
         # Check filter is valid regex
         try:
             re.compile(filter)
-            dicom_struct = filter_dicom_struct(dicom_struct, filter)
+            dicom_struct = filter_dicom_struct(dicom_struct, structure_filter)
         except re.error:
-            raise ValueError(f"Invalid regex pattern: {filter}")
+            raise ValueError(f"Invalid regex pattern: {structure_filter}")
 
     struct_list, struct_name_sequence = transform_point_set_from_dicom_struct(
         dicom_image, dicom_struct, spacing
