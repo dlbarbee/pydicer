@@ -318,7 +318,7 @@ class ConvertData:
         df_pat_data = df_pat_data.reset_index(drop=True)
         df_pat_data.to_csv(converted_df_path)
 
-    def convert(self, patient: Union[str, list]=None, force: bool=True):
+    def convert(self, patient: Union[str, list]=None, force: bool=True, structure_filter: str=None):
         """Converts the DICOM which was preprocessed into the pydicer output directory.
 
         Args:
@@ -326,6 +326,7 @@ class ConvertData:
               None.
             force (bool, optional): When True objects will be converted even if the output files
               already exist. Defaults to True.
+            structure_filter (str, optional): Regex filter to avoid converting RTSTRUCTs with matching names.
         """
 
         # Create the output directory if it hasn't already been created
@@ -525,6 +526,7 @@ class ConvertData:
                                 output_dir=output_dir,
                                 output_img=None,
                                 spacing=None,
+                                pattern=structure_filter,
                             )
 
                             if config.get_config("generate_nrrd"):

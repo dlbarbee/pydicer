@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 import pydicom
+import re
 import SimpleITK as sitk
 import matplotlib
 
@@ -17,6 +18,7 @@ def convert_rtstruct(
     output_dir=".",
     output_img=None,
     spacing=None,
+    filter=None,
 ):
     """Convert a DICOM RTSTRUCT to NIFTI masks.
 
@@ -67,6 +69,14 @@ def convert_rtstruct(
             spacing = [float(i) for i in spacing.split(",")]
         logger.debug("Overriding image spacing with: %s", spacing)
 
+    if filter:
+        # Check filter is valid regex
+        try:
+            re.compile(filter)
+            dicom_struct = filter_dicom_struct(dicom_struct, filter)
+        except re.error:
+            raise ValueError(f"Invalid regex pattern: {filter}")
+
     struct_list, struct_name_sequence = transform_point_set_from_dicom_struct(
         dicom_image, dicom_struct, spacing
     )
@@ -79,7 +89,6 @@ def convert_rtstruct(
 
     if image_output_path is not None:
         sitk.WriteImage(dicom_image, str(image_output_path))
-
 
 def write_nrrd_from_mask_directory(
     mask_directory, output_file, colormap=matplotlib.colormaps.get_cmap("rainbow")
@@ -103,3 +112,49 @@ def write_nrrd_from_mask_directory(
 
     write_nrrd_structure_set(masks, output_file=output_file, colormap=colormap)
     logger.debug("Writing NRRD Structure Set to: %s", output_file)
+
+def filter_dicom_struct(dicom_struct, pattern=None):
+    """
+    Filter structures in the DICOM RTSTRUCT based on a given pattern.
+    
+    Args:
+        dicom_struct (pydicom.Dataset): The DICOM RTSTRUCT dataset to filter.
+        pattern (str, optional): A regex pattern to filter structure names.
+                                 Structures matching the pattern will be removed.
+    
+    Returns:
+        pydicom.Dataset: The filtered DICOM RTSTRUCT dataset.
+
+    Example:
+        ^z.* will remove all structures starting with the letter 'z'.
+        ^z\d+ will remove all structures starting with 'z' followed by one or more digits.
+        ^z.*|^x.* will remove all structures starting with 'z' or 'x'.
+        ^opt.* will remove all structures starting with 'opt'.
+    """
+    if pattern is not None:
+        regex = re.compile(pattern, re.IGNORECASE)
+
+    # Keep structures that do not match the pattern
+    filtered_rois = []
+    for roi in dicom_struct.StructureSetROISequence:
+        roi_name = roi.ROIName
+        if pattern is None or not regex.match(roi_name):
+            filtered_rois.append(roi)
+    
+    # Update the StructureSetROISequence with filtered ROIs
+    dicom_struct.StructureSetROISequence = filtered_rois
+    
+    # Also update any dependent sequences like ROIContourSequence
+    if hasattr(dicom_struct, 'ROIContourSequence'):
+        dicom_struct.ROIContourSequence = [
+            contour for contour in dicom_struct.ROIContourSequence
+            if any(roi.ROINumber == contour.ReferencedROINumber for roi in filtered_rois)
+        ]
+    
+    if hasattr(dicom_struct, 'RTROIObservationsSequence'):
+        dicom_struct.RTROIObservationsSequence = [
+            observation for observation in dicom_struct.RTROIObservationsSequence
+            if any(roi.ROINumber == observation.ReferencedROINumber for roi in filtered_rois)
+        ]
+
+    return dicom_struct
