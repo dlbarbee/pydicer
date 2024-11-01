@@ -31,6 +31,7 @@ from pydicer.constants import (
     MR_IMAGE_STORAGE_UID,
     # REG_STORAGE_UID,
     # MR4D_IMAGE_STORAGE_UID,
+    # RT_IMAGE_STORAGE_UID,
 )
 from pydicer.logger import PatientLogger
 

@@ -18,6 +18,7 @@ from pydicer.constants import (
     MR_IMAGE_STORAGE_UID,
     MR4D_IMAGE_STORAGE_UID,
     REG_STORAGE_UID,
+    RT_IMAGE_STORAGE_UID,
 )
 from pydicer.quarantine import copy_file_to_quarantine
 from pydicer.utils import read_preprocessed_data, get_iterator
@@ -105,6 +106,9 @@ class PreprocessData:
                     logger.warning("Unable to determine Reference Series UID")
 
             elif dicom_type_uid == RT_DOSE_STORAGE_UID:
+                # Return if DoseSummationType is BEAM, only accept PLAN dose summation
+                if ds.DoseSummationType == "BEAM":
+                    return None
                 try:
                     referenced_sop_instance_uid = ds.ReferencedRTPlanSequence[
                         0
@@ -117,7 +121,6 @@ class PreprocessData:
                 CT_IMAGE_STORAGE_UID,
                 PET_IMAGE_STORAGE_UID,
                 MR_IMAGE_STORAGE_UID,
-                #MR4D_IMAGE_STORAGE_UID,
             ):
                 image_position = np.array(ds.ImagePositionPatient, dtype=float)
                 image_orientation = np.array(ds.ImageOrientationPatient, dtype=float)
@@ -149,6 +152,11 @@ class PreprocessData:
                 return None
             elif dicom_type_uid == REG_STORAGE_UID:
                 logger.warning("REG DICOM files are not yet supported. Skipping file %s", file)
+                return None
+            elif dicom_type_uid == RT_IMAGE_STORAGE_UID:
+                logger.warning(
+                    "RT Image DICOM files are not yet supported. Skipping file %s", file
+                )
                 return None
             else:
                 raise ValueError(
