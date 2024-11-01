@@ -526,7 +526,7 @@ class ConvertData:
                                 output_dir=output_dir,
                                 output_img=None,
                                 spacing=None,
-                                pattern=structure_filter,
+                                structure_filter=structure_filter,
                             )
 
                             if config.get_config("generate_nrrd"):

@@ -113,13 +113,13 @@ def write_nrrd_from_mask_directory(
     write_nrrd_structure_set(masks, output_file=output_file, colormap=colormap)
     logger.debug("Writing NRRD Structure Set to: %s", output_file)
 
-def filter_dicom_struct(dicom_struct, pattern=None):
+def filter_dicom_struct(dicom_struct, structure_filter=None):
     """
     Filter structures in the DICOM RTSTRUCT based on a given pattern.
     
     Args:
         dicom_struct (pydicom.Dataset): The DICOM RTSTRUCT dataset to filter.
-        pattern (str, optional): A regex pattern to filter structure names.
+        structure_filter (str, optional): A regex pattern to filter structure names.
                                  Structures matching the pattern will be removed.
     
     Returns:
@@ -131,14 +131,14 @@ def filter_dicom_struct(dicom_struct, pattern=None):
         ^z.*|^x.* will remove all structures starting with 'z' or 'x'.
         ^opt.* will remove all structures starting with 'opt'.
     """
-    if pattern is not None:
-        regex = re.compile(pattern, re.IGNORECASE)
+    if structure_filter is not None:
+        regex = re.compile(structure_filter, re.IGNORECASE)
 
     # Keep structures that do not match the pattern
     filtered_rois = []
     for roi in dicom_struct.StructureSetROISequence:
         roi_name = roi.ROIName
-        if pattern is None or not regex.match(roi_name):
+        if structure_filter is None or not regex.match(roi_name):
             filtered_rois.append(roi)
     
     # Update the StructureSetROISequence with filtered ROIs
