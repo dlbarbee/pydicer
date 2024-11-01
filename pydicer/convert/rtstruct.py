@@ -69,13 +69,9 @@ def convert_rtstruct(
             spacing = [float(i) for i in spacing.split(",")]
         logger.debug("Overriding image spacing with: %s", spacing)
 
-    if structure_filter:
-        # Check filter is valid regex
-        try:
-            re.compile(filter)
-            dicom_struct = filter_dicom_struct(dicom_struct, structure_filter)
-        except re.error:
-            raise ValueError(f"Invalid regex pattern: {structure_filter}")
+    if structure_filter is not None:
+        dicom_struct = filter_dicom_struct(dicom_struct, structure_filter)
+
 
     struct_list, struct_name_sequence = transform_point_set_from_dicom_struct(
         dicom_image, dicom_struct, spacing
@@ -127,12 +123,19 @@ def filter_dicom_struct(dicom_struct, structure_filter=None):
 
     Example:
         ^z.* will remove all structures starting with the letter 'z'.
-        ^z\d+ will remove all structures starting with 'z' followed by one or more digits.
+        ^z{backslash}d+ will remove all structures starting with 'z' followed by one or more digits.
         ^z.*|^x.* will remove all structures starting with 'z' or 'x'.
         ^opt.* will remove all structures starting with 'opt'.
     """
     if structure_filter is not None:
-        regex = re.compile(structure_filter, re.IGNORECASE)
+        try:
+            re.compile(structure_filter)
+            regex = re.compile(structure_filter, re.IGNORECASE)
+        except re.error:
+            raise ValueError("Invalid regex pattern")
+    else:
+        regex = None
+        return dicom_struct
 
     # Keep structures that do not match the pattern
     filtered_rois = []
